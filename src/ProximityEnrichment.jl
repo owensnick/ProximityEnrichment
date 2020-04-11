@@ -107,7 +107,7 @@ end
 
     returns pvalue of right tail and oddsratio
 """
-function hypertest(indA, indB, tail=:right)
+function hypertest(indA, indB; tail=:right)
 
     ### Hypergeometric distribution is parametised by
     ## success in population (number of positives in B)
