@@ -1,9 +1,9 @@
 module ProximityEnrichment
 
-using GenomicFeatures, Statistics, StatsBase, HypothesisTests
+using GenomicFeatures, Statistics, StatsBase, HypothesisTests, Distributions
 
 
-
+export proxenrich
 
 """
     intervaldist(intA, intB)
@@ -83,7 +83,7 @@ end
     indA   logical vector selecting items in list A
     indB   logical vector selecting items in list B
 
-    returns pvalues and oddsratio
+    returns pvalue of right tail and oddsratio
 """
 function fishertest(indA, indB)
     a = sum( indA  .&  indB )
@@ -99,9 +99,38 @@ function fishertest(indA, indB)
     pvalue(FisherExactTest(a, b, c, d), tail=:right), or
 end
 
+"""
+    hypertest(indA, indB)
+
+    indA   logical vector selecting items in list A
+    indB   logical vector selecting items in list B
+
+    returns pvalue of right tail and oddsratio
+"""
+function hypertest(indA, indB)
+
+    ### Hypergeometric distribution is parametised by
+    ## success in population (number of positives in B)
+    ## failures in population (numnber of negatives in B)
+    ## Number of trials (total positives in A)
+    ## pvalue is ccdf of k where k is the number of positves in A and B
+    s = sum(indB)          ## sucesses
+    f = length(indB) - s   ## failures
+    n = sum(indA)          ## trials
+
+    k = sum( indA  .&  indB )
+    b = sum( indA  .& .!indB )
+    c = sum(.!indA .&  indB )
+    d = sum(.!indA .& .!indB )
+
+    hp = ccdf(Hypergeometric(s, f, n), k)
+    or = (k/c)/(b/d)
+    hp, or
+end
+
 
 """
-    fisherdist(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="")
+    proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="")
 
     xp          points to calculate enrichment at
     genes       Vector of Intervals describing TSS coordinates
@@ -109,11 +138,12 @@ end
     geneind     logical vector selecting the foreground, i.e. genes of interest
     peakind     logical vector selecting the peaks to
 
-
+    Calculates right tail pvalues using hypergeometric or FisherExactTest
+    
     returns named tuple of relevant stats
 
 """
-function fisherdist(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="")
+function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="", testfun=fishertest)
     ### Calculate distance closest peak to each tss
     Δb = trans.(closest_tss_peak(genes, peaks[peakind]))     ## background
     Δg = Δb[geneind]                                         ## foreground
@@ -122,15 +152,17 @@ function fisherdist(xp, genes, peaks, geneind=trues(length(genes)), peakind=true
     xg, xgi = getx(Δg, xp)
 
     ### enrichment over background, not necessary for fisher calculation, but useful to plot
-    fc = ecdf(Δg)(xg)./ecdf(Δb)(xg)
+    ## Remove Calculation of ecdf for now
+    # fc = ecdf(Δg)(xg)./ecdf(Δb)(xg)
 
     ### Fisher tests for number of genes within δ against gene list
     count = [sum(Δb .≤ δ) for δ ∈ xg]
-    ft    = [fishertest(geneind, Δb .≤ δ) for δ ∈ xg]
+    ft    = [testfun(geneind, Δb .≤ δ) for δ ∈ xg]
 
     pvalue = first.(ft)
     or     = last.(ft)
-    (xg=xg, xgi=xgi, fc=fc, pvalue=pvalue, or=or, n=sum(geneind), np=size(peaks[peakind]), count=count, label=label)
+    (xg=xg, xgi=xgi, pvalue=pvalue, or=or, n=sum(geneind), np=size(peaks[peakind]), count=count, label=label)
 end
+
 
 end # module
