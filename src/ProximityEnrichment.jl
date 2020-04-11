@@ -139,11 +139,11 @@ end
     peakind     logical vector selecting the peaks to
 
     Calculates right tail pvalues using hypergeometric or FisherExactTest
-    
+
     returns named tuple of relevant stats
 
 """
-function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="", testfun=fishertest)
+function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="", testfun=hypertest)
     ### Calculate distance closest peak to each tss
     Δb = trans.(closest_tss_peak(genes, peaks[peakind]))     ## background
     Δg = Δb[geneind]                                         ## foreground
