@@ -145,6 +145,9 @@ end
 """
 function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="", testfun=hypertest)
     ### Calculate distance closest peak to each tss
+
+    !issorted(genes) && error("Genes not sorted")
+    !issorted(peaks) && error("Peaks not sorted")
     Δb = trans.(closest_tss_peak(genes, peaks[peakind]))     ## background
     Δg = Δb[geneind]                                         ## foreground
 
