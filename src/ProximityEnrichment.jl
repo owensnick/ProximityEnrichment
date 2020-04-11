@@ -85,7 +85,7 @@ end
 
     returns pvalue of right tail and oddsratio
 """
-function fishertest(indA, indB)
+function fishertest(indA, indB; tail=:right)
     a = sum( indA  .&  indB )
     b = sum( indA  .& .!indB )
     c = sum(.!indA .&  indB )
@@ -96,7 +96,7 @@ function fishertest(indA, indB)
     end
     or = (a/c)/(b/d)
 
-    pvalue(FisherExactTest(a, b, c, d), tail=:right), or
+    pvalue(FisherExactTest(a, b, c, d), tail=tail), or
 end
 
 """
@@ -107,7 +107,7 @@ end
 
     returns pvalue of right tail and oddsratio
 """
-function hypertest(indA, indB)
+function hypertest(indA, indB, tail=:right)
 
     ### Hypergeometric distribution is parametised by
     ## success in population (number of positives in B)
@@ -123,7 +123,12 @@ function hypertest(indA, indB)
     c = sum(.!indA .&  indB )
     d = sum(.!indA .& .!indB )
 
-    hp = ccdf(Hypergeometric(s, f, n), k)
+    if tail == :right
+        hp = ccdf(Hypergeometric(s, f, n), k)
+    elseif tail == :left
+        hp = cdf(Hypergeometric(s, f, n), k)
+    end
+
     or = (k/c)/(b/d)
     hp, or
 end
@@ -143,7 +148,7 @@ end
     returns named tuple of relevant stats
 
 """
-function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="", testfun=hypertest)
+function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=trues(length(peaks)); trans = x -> log10(x + 1), label="", testfun=hypertest, tail=:right)
     ### Calculate distance closest peak to each tss
 
     !issorted(genes) && error("Genes not sorted")
@@ -160,7 +165,7 @@ function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=true
 
     ### Fisher tests for number of genes within δ against gene list
     count = [sum(Δb .≤ δ) for δ ∈ xg]
-    ft    = [testfun(geneind, Δb .≤ δ) for δ ∈ xg]
+    ft    = [testfun(geneind, Δb .≤ δ, tail=tail) for δ ∈ xg]
 
     pvalue = first.(ft)
     or     = last.(ft)
