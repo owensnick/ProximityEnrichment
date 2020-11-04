@@ -123,8 +123,12 @@ function hypertest(indA, indB; tail=:right)
     c = sum(.!indA .&  indB )
     d = sum(.!indA .& .!indB )
 
+    if iszero(k) || iszero(b) || iszero(c) || iszero(d)
+       return 1.0, 1.0
+    end
+
     if tail == :right
-        hp = ccdf(Hypergeometric(s, f, n), k)
+        hp = ccdf(Hypergeometric(s, f, n), k - 1)
     elseif tail == :left
         hp = cdf(Hypergeometric(s, f, n), k)
     end
