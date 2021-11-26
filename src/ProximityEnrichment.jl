@@ -157,8 +157,10 @@ function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=true
 
     !issorted(genes) && error("Genes not sorted")
     !issorted(peaks) && error("Peaks not sorted")
-    Δb = trans.(closest_tss_peak(genes, peaks[peakind]))     ## background
-    Δg = Δb[geneind]                                         ## foreground
+    db = closest_tss_peak(genes, peaks[peakind])
+    validdist = db .!= -1 ### closest_tss_peak returns -1 if no peaks on same chromosome
+    Δb = trans.(db)     ## background
+    Δg = Δb[geneind]    ## foreground
 
     ### Calculate subset of xp to avoid calculating pvalues at distances below/above closest/furtherest gene
     xg, xgi = getx(Δg, xp)
@@ -168,8 +170,8 @@ function proxenrich(xp, genes, peaks, geneind=trues(length(genes)), peakind=true
     # fc = ecdf(Δg)(xg)./ecdf(Δb)(xg)
 
     ### Fisher tests for number of genes within δ against gene list
-    count = [sum(Δb .≤ δ) for δ ∈ xg]
-    ft    = [testfun(geneind, Δb .≤ δ, tail=tail) for δ ∈ xg]
+    count = [sum(geneind .& (Δb .≤ δ) .& validdist) for δ ∈ xg]
+    ft    = [testfun(geneind, (Δb .≤ δ) .& validdist, tail=tail) for δ ∈ xg]
 
     pvalue = first.(ft)
     or     = last.(ft)
